@@ -1,10 +1,36 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const { startServer } = await import('../scripts/server.mjs');
+const [{ startServer }, { checkDocs }, { checkRelease }] = await Promise.all([
+  import('../scripts/server.mjs'),
+  import('../scripts/check-docs.mjs'),
+  import('../scripts/check-release.mjs'),
+]);
+
+const publicSourceUrl = 'https://github.com/ibrinzila/signalui-interface-on-demand';
+const liveDemoUrl = 'https://signalui-interface-on-demand.pages.dev';
+
+async function writeReleaseFixture(root, overrides = {}) {
+  await mkdir(join(root, 'docs'), { recursive: true });
+  await mkdir(join(root, 'public'), { recursive: true });
+  const files = {
+    'README.md': `# SignalUI\n\n## Live demo\n\n${liveDemoUrl}\n\n## Public source\n\n${publicSourceUrl}\n\n## Judge testing\n\n[Guide](docs/judge-testing.md)\n\n## Three-minute demo\n\nOperator upload pending\n`,
+    'LICENSE': 'MIT\n', 'SECURITY.md': '# Security\n', 'CHANGELOG.md': '# Changes\n', 'llms.txt': 'SignalUI\n',
+    'docs/architecture.md': '# Architecture\n', 'docs/webmcp-tools.md': '# Tools\n', 'docs/demo-script.md': '# Demo\n', 'docs/adoption-path.md': '# Adoption\n', 'docs/verification.md': '# Verification\n', 'docs/deployment.md': '# Deployment\n',
+    'docs/devpost-submission.md': `# Submission\n\n## WebMCP leverage\n\nNative registration uses CommandBus.execute.\n\n## People and agents together\n\nShared authority.\n\n## Implementation\n\nTypeScript.\n\n## Impact\n\nSynthetic scope.\n\n## Testing\n\n${publicSourceUrl}\n${liveDemoUrl}\n`,
+    'docs/judge-testing.md': `# Judge guide\n\n## Native WebMCP check\n\nNative WebMCP uses document.modelContext.registerTool.\n\n## Fallback console check\n\nThe fallback console is not native WebMCP.\n\n${publicSourceUrl}\n${liveDemoUrl}\n`,
+    'docs/release-evidence.md': `# NOT YET VERIFIED / NOT YET DEPLOYED\n\n- **Source commit:** NOT YET RECORDED\n- **Deployment URL:** ${liveDemoUrl}\n- **Deployment timestamp:** NOT YET DEPLOYED\n- **Smoke results:** NOT YET VERIFIED\n- **Public source URL:** ${publicSourceUrl}\n`,
+    'wrangler.toml': 'name = "signalui"\n', 'public/_headers': '/*\n', 'public/manifest.webmanifest': '{}\n',
+    ...overrides,
+  };
+  await Promise.all(Object.entries(files).map(async ([path, body]) => {
+    await mkdir(join(root, path, '..'), { recursive: true });
+    await writeFile(join(root, path), body);
+  }));
+}
 
 test('judge-facing release documents provide the required evidence and testing boundaries', async () => {
   const [devpost, judgeTesting, releaseEvidence] = await Promise.all([
@@ -18,9 +44,52 @@ test('judge-facing release documents provide the required evidence and testing b
   }
   assert.match(judgeTesting, /native WebMCP/i);
   assert.match(judgeTesting, /fallback console/i);
+  for (const body of [devpost, judgeTesting, releaseEvidence]) {
+    assert.match(body, new RegExp(publicSourceUrl.replaceAll('.', '\\.'), 'i'));
+    assert.match(body, new RegExp(liveDemoUrl.replaceAll('.', '\\.'), 'i'));
+  }
+  assert.match(judgeTesting, /^## Native WebMCP check\n\n[\s\S]*document\.modelContext\.registerTool/m);
+  assert.match(judgeTesting, /^## Fallback console check\n\n[\s\S]*not native WebMCP/m);
   for (const field of ['Source commit', 'Deployment URL', 'Deployment timestamp', 'Smoke results']) {
     assert.match(releaseEvidence, new RegExp(`^[-*] \\*\\*${field}:\\*\\*`, 'm'));
   }
+});
+
+test('documentation checks reject wrong coordinates and misleading WebMCP boundaries', async (t) => {
+  const wrongUrlRoot = await mkdtemp(join(tmpdir(), 'signalui-docs-wrong-url-'));
+  const misleadingRoot = await mkdtemp(join(tmpdir(), 'signalui-docs-misleading-boundary-'));
+  t.after(async () => Promise.all([
+    rm(wrongUrlRoot, { recursive: true, force: true }),
+    rm(misleadingRoot, { recursive: true, force: true }),
+  ]));
+  await writeReleaseFixture(wrongUrlRoot, {
+    'docs/release-evidence.md': `# NOT YET VERIFIED / NOT YET DEPLOYED\n\n- **Source commit:** NOT YET RECORDED\n- **Deployment URL:** https://wrong.example\n- **Deployment timestamp:** NOT YET DEPLOYED\n- **Smoke results:** NOT YET VERIFIED\n- **Public source URL:** ${publicSourceUrl}\n`,
+  });
+  await writeReleaseFixture(misleadingRoot, {
+    'docs/judge-testing.md': `# Judge guide\n\n## Native WebMCP check\n\nThe fallback console demonstrates tools.\n\n## Fallback console check\n\nNative WebMCP is always available.\n\n${publicSourceUrl}\n${liveDemoUrl}\n`,
+  });
+  await assert.rejects(checkDocs({ root: wrongUrlRoot }), /signalui-interface-on-demand\.pages\.dev/);
+  await assert.rejects(checkDocs({ root: misleadingRoot }), /Native WebMCP check/);
+});
+
+test('release check rejects a moved or duplicated video pending marker', async (t) => {
+  const movedRoot = await mkdtemp(join(tmpdir(), 'signalui-release-moved-marker-'));
+  const duplicatedRoot = await mkdtemp(join(tmpdir(), 'signalui-release-duplicate-marker-'));
+  t.after(async () => Promise.all([
+    rm(movedRoot, { recursive: true, force: true }),
+    rm(duplicatedRoot, { recursive: true, force: true }),
+  ]));
+  await writeReleaseFixture(movedRoot, {
+    'README.md': `# SignalUI\n\n## Live demo\n\n${liveDemoUrl}\n\n## Public source\n\n${publicSourceUrl}\n\n## Judge testing\n\n[Guide](docs/judge-testing.md)\n\n## Three-minute demo\n\nhttps://video.example/demo\n\n## Notes\n\nOperator upload pending\n`,
+  });
+  await writeReleaseFixture(duplicatedRoot, {
+    'README.md': `# SignalUI\n\n## Live demo\n\n${liveDemoUrl}\n\n## Public source\n\n${publicSourceUrl}\n\n## Judge testing\n\n[Guide](docs/judge-testing.md)\n\n## Three-minute demo\n\nOperator upload pending\n\n## Notes\n\nOperator upload pending\n`,
+  });
+  const moved = await checkRelease({ root: movedRoot });
+  const duplicated = await checkRelease({ root: duplicatedRoot });
+  assert.ok(moved.failures.includes('readme-video-field'));
+  assert.ok(moved.failures.includes('video-marker-outside-video-field:README.md'));
+  assert.ok(duplicated.failures.includes('video-marker-outside-video-field:README.md'));
 });
 
 test('static server serves same-origin assets with fail-closed security headers', async (t) => {

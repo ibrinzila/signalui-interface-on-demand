@@ -12,7 +12,7 @@ When native WebMCP is unavailable, the in-page fallback console uses the same ca
 
 ## People and agents together
 
-The complete workspace begins with 47 available controls. An operator explicitly asking for mobile, time-limited help receives three evidence-backed decisions instead. Material uncertainty and counterevidence remain visible, and the person can explain the adaptation or restore the full workspace.
+The complete workspace begins as a broad operations workspace. An operator explicitly asking for mobile, time-limited help receives three evidence-backed decisions instead. Material uncertainty and counterevidence remain visible, and the person can explain the adaptation or restore the full workspace.
 
 People and agents share the same governed workflow: inspect an anomaly, compare history, propose a correction, request approval, and inspect the receipt. An operator’s attempt to approve is denied, recorded, and leaves operational state unchanged. A manager can approve only the exact, current approval fingerprint.
 

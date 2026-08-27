@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, normalize, posix, resolve } from 'node:path';
@@ -6,21 +7,41 @@ import { CdpClient } from '../scripts/cdp-client.mjs';
 
 const delay = (ms) => new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
 
-async function waitForDevTools(process, timeout = 15_000) {
+export function resolveChromiumExecutable({ env = process.env, platform = process.platform, exists = existsSync } = {}) {
+  if (env.CHROMIUM_PATH) return env.CHROMIUM_PATH;
+
+  const candidates = platform === 'darwin'
+    ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']
+    : ['/usr/bin/chromium'];
+  const executable = candidates.find(exists);
+  if (executable) return executable;
+
+  throw new Error(`Chromium executable not found. Set CHROMIUM_PATH explicitly or install a supported browser. Attempted: ${candidates.join(', ')}`);
+}
+
+async function waitForDevTools(process, executable, timeout = 15_000) {
   return new Promise((resolveReady, reject) => {
     let buffer = '';
-    const timer = setTimeout(() => reject(new Error(`Chromium DevTools endpoint timed out. ${buffer.slice(-500)}`)), timeout);
+    let settled = false;
+    const settle = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      callback(value);
+    };
+    const timer = setTimeout(() => settle(reject, new Error(`Chromium DevTools endpoint timed out. ${buffer.slice(-500)}`)), timeout);
     const inspect = (chunk) => {
       buffer += chunk.toString();
       const match = buffer.match(/DevTools listening on (ws:\/\/[^\s]+)/);
       if (!match) return;
-      clearTimeout(timer);
-      resolveReady(match[1]);
+      settle(resolveReady, match[1]);
     };
     process.stderr.on('data', inspect);
+    process.once('error', (error) => {
+      settle(reject, new Error(`Unable to start Chromium at ${executable}: ${error.code ?? error.message}`));
+    });
     process.once('exit', (code) => {
-      clearTimeout(timer);
-      reject(new Error(`Chromium exited before DevTools was ready (${code}). ${buffer.slice(-500)}`));
+      settle(reject, new Error(`Chromium exited before DevTools was ready (${code}). ${buffer.slice(-500)}`));
     });
   });
 }
@@ -125,7 +146,8 @@ async function injectApplication(client, root) {
 export async function launchBrowserHarness({ width = 1440, height = 1000, root = 'dist' } = {}) {
   const resolvedRoot = resolve(root);
   const profile = await mkdtemp(join(tmpdir(), 'signalui-chromium-'));
-  const browser = spawn(process.env.CHROMIUM_PATH ?? '/usr/bin/chromium', [
+  const executable = resolveChromiumExecutable();
+  const browser = spawn(executable, [
     '--headless=new',
     '--no-sandbox',
     '--disable-gpu',
@@ -139,7 +161,7 @@ export async function launchBrowserHarness({ width = 1440, height = 1000, root =
   ], { stdio: ['ignore', 'ignore', 'pipe'] });
 
   try {
-    const browserWs = await waitForDevTools(browser);
+    const browserWs = await waitForDevTools(browser, executable);
     const debugPort = new URL(browserWs).port;
     const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: 'PUT' });
     if (!targetResponse.ok) throw new Error(`Unable to create Chromium target (${targetResponse.status}).`);

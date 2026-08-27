@@ -102,9 +102,11 @@ test('documentation checks ignore headings and evidence hidden in fenced blocks 
 test('release check rejects a moved or duplicated video pending marker', async (t) => {
   const movedRoot = await mkdtemp(join(tmpdir(), 'signalui-release-moved-marker-'));
   const duplicatedRoot = await mkdtemp(join(tmpdir(), 'signalui-release-duplicate-marker-'));
+  const fencedRoot = await mkdtemp(join(tmpdir(), 'signalui-release-fenced-marker-'));
   t.after(async () => Promise.all([
     rm(movedRoot, { recursive: true, force: true }),
     rm(duplicatedRoot, { recursive: true, force: true }),
+    rm(fencedRoot, { recursive: true, force: true }),
   ]));
   await writeReleaseFixture(movedRoot, {
     'README.md': `# SignalUI\n\n## Live demo\n\n${liveDemoUrl}\n\n## Public source\n\n${publicSourceUrl}\n\n## Judge testing\n\n[Guide](docs/judge-testing.md)\n\n## Three-minute demo\n\nhttps://video.example/demo\n\n## Notes\n\nOperator upload pending\n`,
@@ -112,11 +114,16 @@ test('release check rejects a moved or duplicated video pending marker', async (
   await writeReleaseFixture(duplicatedRoot, {
     'README.md': `# SignalUI\n\n## Live demo\n\n${liveDemoUrl}\n\n## Public source\n\n${publicSourceUrl}\n\n## Judge testing\n\n[Guide](docs/judge-testing.md)\n\n## Three-minute demo\n\nOperator upload pending\n\n## Notes\n\nOperator upload pending\n`,
   });
+  await writeReleaseFixture(fencedRoot, {
+    'docs/devpost-submission.md': `# Submission\n\n\`\`\`text\nOperator upload pending\n\`\`\`\n`,
+  });
   const moved = await checkRelease({ root: movedRoot });
   const duplicated = await checkRelease({ root: duplicatedRoot });
+  const fenced = await checkRelease({ root: fencedRoot });
   assert.ok(moved.failures.includes('readme-video-field'));
-  assert.ok(moved.failures.includes('video-marker-outside-video-field:README.md'));
-  assert.ok(duplicated.failures.includes('video-marker-outside-video-field:README.md'));
+  assert.ok(moved.failures.includes('video-marker-not-readme-field'));
+  assert.ok(duplicated.failures.includes('video-marker-count'));
+  assert.ok(fenced.failures.includes('video-marker-count'));
 });
 
 test('static server serves same-origin assets with fail-closed security headers', async (t) => {

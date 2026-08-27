@@ -62,6 +62,10 @@ function isRelevantReleaseDocument(root, path) {
   return extname(path).toLowerCase() === '.md' && !projectPath.startsWith('.superpowers/') && !projectPath.startsWith('docs/superpowers/');
 }
 
+function rawMarkdownWithoutComments(body) {
+  return body.replace(/<!--[\s\S]*?(?:-->|$)/g, '');
+}
+
 export async function checkRelease({ root = process.cwd() } = {}) {
   const failures = [];
   const required = ['README.md', 'LICENSE', 'SECURITY.md', 'docs/deployment.md', 'docs/devpost-submission.md', 'docs/judge-testing.md', 'docs/release-evidence.md', 'wrangler.toml', 'public/_headers', 'public/manifest.webmanifest'];
@@ -82,12 +86,14 @@ export async function checkRelease({ root = process.cwd() } = {}) {
       if (section(readme, heading) === null || !section(readme, heading).includes(expected)) failures.push(`readme-release-field:${heading}`);
     }
     const videoField = section(readme, 'Three-minute demo');
-    if (videoField !== pendingVideo && !/^https:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[A-Za-z0-9_-]+(?:[?&][^\s]*)?$/.test(videoField ?? '')) failures.push('readme-video-field');
+    if (videoField !== pendingVideo) failures.push('readme-video-field');
+    let pendingMarkerCount = 0;
     for (const path of projectFiles.filter((path) => isRelevantReleaseDocument(root, path))) {
-      const body = visibleMarkdown(await readFile(path, 'utf8')).join('\n');
-      const allowed = relative(root, path) === 'README.md' && videoField === pendingVideo ? 1 : 0;
-      if (body.split(pendingVideo).length - 1 > allowed) failures.push(`video-marker-outside-video-field:${relative(root, path)}`);
+      const body = rawMarkdownWithoutComments(await readFile(path, 'utf8'));
+      pendingMarkerCount += body.split(pendingVideo).length - 1;
     }
+    if (pendingMarkerCount !== 1) failures.push('video-marker-count');
+    if (videoField !== pendingVideo) failures.push('video-marker-not-readme-field');
   } catch {
     failures.push('readme-release-fields');
   }

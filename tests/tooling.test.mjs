@@ -21,7 +21,7 @@ async function writeReleaseFixture(root, overrides = {}) {
     'LICENSE': 'MIT\n', 'SECURITY.md': '# Security\n', 'CHANGELOG.md': '# Changes\n', 'llms.txt': 'SignalUI\n',
     'docs/architecture.md': '# Architecture\n', 'docs/webmcp-tools.md': '# Tools\n', 'docs/demo-script.md': '# Demo\n', 'docs/adoption-path.md': '# Adoption\n', 'docs/verification.md': '# Verification\n', 'docs/deployment.md': '# Deployment\n',
     'docs/devpost-submission.md': `# Submission\n\n## WebMCP leverage\n\nNative registration uses CommandBus.execute.\n\n## People and agents together\n\nShared authority.\n\n## Implementation\n\nTypeScript.\n\n## Impact\n\nSynthetic scope.\n\n## Testing\n\n${publicSourceUrl}\n${liveDemoUrl}\n`,
-    'docs/judge-testing.md': `# Judge guide\n\n## Native WebMCP check\n\nNative WebMCP uses document.modelContext.registerTool.\n\n## Fallback console check\n\nThe fallback console is not native WebMCP.\n\n${publicSourceUrl}\n${liveDemoUrl}\n`,
+    'docs/judge-testing.md': `# Judge guide\n\n## Native WebMCP check\n\nNative WebMCP uses document.modelContext.registerTool. This is the only path that establishes native WebMCP availability.\n\n## Fallback console check\n\nThe fallback console is not native WebMCP. It uses the same catalog as native WebMCP tools and the same CommandBus.execute path as human controls.\n\n${publicSourceUrl}\n${liveDemoUrl}\n`,
     'docs/release-evidence.md': `# NOT YET VERIFIED / NOT YET DEPLOYED\n\n- **Source commit:** NOT YET RECORDED\n- **Deployment URL:** ${liveDemoUrl}\n- **Deployment timestamp:** NOT YET DEPLOYED\n- **Smoke results:** NOT YET VERIFIED\n- **Public source URL:** ${publicSourceUrl}\n`,
     'wrangler.toml': 'name = "signalui"\n', 'public/_headers': '/*\n', 'public/manifest.webmanifest': '{}\n',
     ...overrides,
@@ -49,7 +49,8 @@ test('judge-facing release documents provide the required evidence and testing b
     assert.match(body, new RegExp(liveDemoUrl.replaceAll('.', '\\.'), 'i'));
   }
   assert.match(judgeTesting, /^## Native WebMCP check\n\n[\s\S]*document\.modelContext\.registerTool/m);
-  assert.match(judgeTesting, /^## Fallback console check\n\n[\s\S]*not native WebMCP/m);
+  assert.match(judgeTesting, /^## Fallback console check\n\n[\s\S]*same catalog as native WebMCP tools[\s\S]*same `CommandBus\.execute` path as human controls/m);
+  assert.match(judgeTesting, /The fallback console is a demonstration fallback, not native WebMCP\./);
   for (const field of ['Source commit', 'Deployment URL', 'Deployment timestamp', 'Smoke results']) {
     assert.match(releaseEvidence, new RegExp(`^[-*] \\*\\*${field}:\\*\\*`, 'm'));
   }
@@ -70,6 +71,32 @@ test('documentation checks reject wrong coordinates and misleading WebMCP bounda
   });
   await assert.rejects(checkDocs({ root: wrongUrlRoot }), /signalui-interface-on-demand\.pages\.dev/);
   await assert.rejects(checkDocs({ root: misleadingRoot }), /Native WebMCP check/);
+});
+
+test('documentation checks ignore headings and evidence hidden in fenced blocks or comments', async (t) => {
+  const fencedRoot = await mkdtemp(join(tmpdir(), 'signalui-docs-fenced-content-'));
+  const commentRoot = await mkdtemp(join(tmpdir(), 'signalui-docs-comment-content-'));
+  t.after(async () => Promise.all([
+    rm(fencedRoot, { recursive: true, force: true }),
+    rm(commentRoot, { recursive: true, force: true }),
+  ]));
+  const hiddenContent = `\`\`\`md\n## WebMCP leverage\n## People and agents together\n## Implementation\n## Impact\n## Testing\n## Native WebMCP check\ndocument.modelContext.registerTool is the only path that establishes native WebMCP availability.\n## Fallback console check\nThis is not native WebMCP and uses the same catalog as native WebMCP tools and the same CommandBus.execute path as human controls.\n${publicSourceUrl}\n${liveDemoUrl}\n\`\`\`\n`;
+  await writeReleaseFixture(fencedRoot, {
+    'docs/devpost-submission.md': hiddenContent,
+    'docs/judge-testing.md': hiddenContent,
+    'docs/release-evidence.md': `# NOT YET VERIFIED / NOT YET DEPLOYED\n\n- **Source commit:** NOT YET RECORDED\n- **Deployment URL:** ${liveDemoUrl}\n- **Deployment timestamp:** NOT YET DEPLOYED\n- **Smoke results:** NOT YET VERIFIED\n- **Public source URL:** ${publicSourceUrl}\n`,
+    'README.md': `# SignalUI\n\n\`\`\`md\n## Live demo\n${liveDemoUrl}\n## Public source\n${publicSourceUrl}\n## Judge testing\ndocs/judge-testing.md\n## Three-minute demo\nOperator upload pending\n\`\`\`\n`,
+  });
+  const hiddenComment = `<!--\n## WebMCP leverage\n## People and agents together\n## Implementation\n## Impact\n## Testing\n## Native WebMCP check\ndocument.modelContext.registerTool is the only path that establishes native WebMCP availability.\n## Fallback console check\nThis is not native WebMCP and uses the same catalog as native WebMCP tools and the same CommandBus.execute path as human controls.\n${publicSourceUrl}\n${liveDemoUrl}\n-->\n`;
+  await writeReleaseFixture(commentRoot, {
+    'docs/devpost-submission.md': hiddenComment,
+    'docs/judge-testing.md': hiddenComment,
+  });
+  await assert.rejects(checkDocs({ root: fencedRoot }), /WebMCP leverage/);
+  await assert.rejects(checkDocs({ root: commentRoot }), /WebMCP leverage/);
+  const release = await checkRelease({ root: fencedRoot });
+  assert.ok(release.failures.includes('readme-release-field:Live demo'));
+  assert.ok(release.failures.includes('readme-video-field'));
 });
 
 test('release check rejects a moved or duplicated video pending marker', async (t) => {

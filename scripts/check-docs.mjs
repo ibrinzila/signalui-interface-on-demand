@@ -7,13 +7,38 @@ const required = ['README.md', 'LICENSE', 'SECURITY.md', 'CHANGELOG.md', 'llms.t
 const publicSourceUrl = 'https://github.com/ibrinzila/signalui-interface-on-demand';
 const liveDemoUrl = 'https://signalui-interface-on-demand.pages.dev';
 
+function visibleMarkdown(body) {
+  const visible = [];
+  let fenced = false;
+  let commented = false;
+  for (const line of body.split('\n')) {
+    if (fenced) {
+      if (/^\s{0,3}(?:`{3,}|~{3,})/.test(line)) fenced = false;
+      continue;
+    }
+    if (commented) {
+      if (line.includes('-->')) commented = false;
+      continue;
+    }
+    if (/^\s{0,3}(?:`{3,}|~{3,})/.test(line)) {
+      fenced = true;
+      continue;
+    }
+    if (line.includes('<!--')) {
+      if (!line.includes('-->')) commented = true;
+      continue;
+    }
+    visible.push(line);
+  }
+  return visible;
+}
+
 function section(body, heading) {
-  const headingLine = `## ${heading}`;
-  const start = body.indexOf(`${headingLine}\n`);
+  const lines = visibleMarkdown(body);
+  const start = lines.findIndex((line) => line.match(/^## (.+?)\s*$/)?.[1].trim() === heading);
   if (start < 0) return null;
-  const contentStart = start + headingLine.length + 1;
-  const next = body.indexOf('\n## ', contentStart);
-  return body.slice(contentStart, next < 0 ? body.length : next).trim();
+  const end = lines.findIndex((line, index) => index > start && /^## .+?\s*$/.test(line));
+  return lines.slice(start + 1, end < 0 ? undefined : end).join('\n').trim();
 }
 
 async function exists(root, path) {
@@ -43,18 +68,21 @@ export async function checkDocs({ root = process.cwd() } = {}) {
     readFile(resolve(root, 'docs/judge-testing.md'), 'utf8'),
     readFile(resolve(root, 'docs/release-evidence.md'), 'utf8'),
   ]);
+  const visibleDevpost = visibleMarkdown(devpost).join('\n');
+  const visibleJudgeTesting = visibleMarkdown(judgeTesting).join('\n');
+  const visibleReleaseEvidence = visibleMarkdown(releaseEvidence).join('\n');
   for (const heading of ['WebMCP leverage', 'People and agents together', 'Implementation', 'Impact', 'Testing']) {
     if (section(devpost, heading) === null) throw new Error(`docs/devpost-submission.md is missing required release content: ## ${heading}`);
   }
-  for (const [path, body] of [['docs/devpost-submission.md', devpost], ['docs/judge-testing.md', judgeTesting], ['docs/release-evidence.md', releaseEvidence]]) {
+  for (const [path, body] of [['docs/devpost-submission.md', visibleDevpost], ['docs/judge-testing.md', visibleJudgeTesting], ['docs/release-evidence.md', visibleReleaseEvidence]]) {
     requireText(path, body, publicSourceUrl);
     requireText(path, body, liveDemoUrl);
   }
   const native = section(judgeTesting, 'Native WebMCP check');
   const fallback = section(judgeTesting, 'Fallback console check');
   if (!native?.includes('document.modelContext.registerTool') || !/only path that establishes native WebMCP availability/i.test(native)) throw new Error('docs/judge-testing.md is missing a precise Native WebMCP check boundary.');
-  if (!fallback?.includes('not native WebMCP') || !/same catalog and command bus/i.test(fallback)) throw new Error('docs/judge-testing.md is missing a precise fallback console boundary.');
-  for (const field of ['**Source commit:**', `**Deployment URL:** ${liveDemoUrl}`, '**Deployment timestamp:**', '**Smoke results:**', `**Public source URL:** ${publicSourceUrl}`]) requireText('docs/release-evidence.md', releaseEvidence, field);
+  if (!fallback?.includes('not native WebMCP') || !/same catalog as native WebMCP tools/i.test(fallback) || !/same `?CommandBus\.execute`? path as human controls/i.test(fallback)) throw new Error('docs/judge-testing.md is missing a precise fallback console boundary.');
+  for (const field of ['**Source commit:**', `**Deployment URL:** ${liveDemoUrl}`, '**Deployment timestamp:**', '**Smoke results:**', `**Public source URL:** ${publicSourceUrl}`]) requireText('docs/release-evidence.md', visibleReleaseEvidence, field);
 
   const markdown = await markdownFiles(root);
   let linksChecked = 0;

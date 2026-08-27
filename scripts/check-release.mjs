@@ -11,13 +11,38 @@ const publicSourceUrl = 'https://github.com/ibrinzila/signalui-interface-on-dema
 const liveDemoUrl = 'https://signalui-interface-on-demand.pages.dev';
 const pendingVideo = 'Operator upload' + ' pending';
 
+function visibleMarkdown(body) {
+  const visible = [];
+  let fenced = false;
+  let commented = false;
+  for (const line of body.split('\n')) {
+    if (fenced) {
+      if (/^\s{0,3}(?:`{3,}|~{3,})/.test(line)) fenced = false;
+      continue;
+    }
+    if (commented) {
+      if (line.includes('-->')) commented = false;
+      continue;
+    }
+    if (/^\s{0,3}(?:`{3,}|~{3,})/.test(line)) {
+      fenced = true;
+      continue;
+    }
+    if (line.includes('<!--')) {
+      if (!line.includes('-->')) commented = true;
+      continue;
+    }
+    visible.push(line);
+  }
+  return visible;
+}
+
 function section(body, heading) {
-  const headingLine = `## ${heading}`;
-  const start = body.indexOf(`${headingLine}\n`);
+  const lines = visibleMarkdown(body);
+  const start = lines.findIndex((line) => line.match(/^## (.+?)\s*$/)?.[1].trim() === heading);
   if (start < 0) return null;
-  const contentStart = start + headingLine.length + 1;
-  const next = body.indexOf('\n## ', contentStart);
-  return body.slice(contentStart, next < 0 ? body.length : next).trim();
+  const end = lines.findIndex((line, index) => index > start && /^## .+?\s*$/.test(line));
+  return lines.slice(start + 1, end < 0 ? undefined : end).join('\n').trim();
 }
 
 async function files(root, directory = root) {
@@ -59,7 +84,7 @@ export async function checkRelease({ root = process.cwd() } = {}) {
     const videoField = section(readme, 'Three-minute demo');
     if (videoField !== pendingVideo && !/^https:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[A-Za-z0-9_-]+(?:[?&][^\s]*)?$/.test(videoField ?? '')) failures.push('readme-video-field');
     for (const path of projectFiles.filter((path) => isRelevantReleaseDocument(root, path))) {
-      const body = await readFile(path, 'utf8');
+      const body = visibleMarkdown(await readFile(path, 'utf8')).join('\n');
       const allowed = relative(root, path) === 'README.md' && videoField === pendingVideo ? 1 : 0;
       if (body.split(pendingVideo).length - 1 > allowed) failures.push(`video-marker-outside-video-field:${relative(root, path)}`);
     }

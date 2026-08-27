@@ -23,7 +23,7 @@ This is the only path that establishes native WebMCP availability. Record the br
 
 ## Fallback console check
 
-If native WebMCP is unavailable, use the page’s labeled fallback console to invoke the same catalog. Confirm that its result and visible state use the same catalog and command bus as the human controls.
+If native WebMCP is unavailable, use the page’s labeled fallback console to invoke the same catalog as native WebMCP tools. Confirm that its result and visible state use the same `CommandBus.execute` path as human controls.
 
 The fallback console is a demonstration fallback, not native WebMCP. Its successful use does not establish browser tool discovery or native WebMCP availability.
 

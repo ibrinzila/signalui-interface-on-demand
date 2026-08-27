@@ -33,7 +33,7 @@ The same vertical includes:
 
 - Node.js **22 or newer**
 - TypeScript **5.8.x** available through `npm install` or on `PATH`
-- Chromium for browser proof. Linux CI auto-detects `/usr/bin/chromium`; macOS development auto-detects Google Chrome. Set `CHROMIUM_PATH` to use an explicit browser executable.
+- Chromium for browser proof. Linux falls back to `/usr/bin/chromium`; CI supplies its setup-Chrome executable through `CHROMIUM_PATH`. macOS development auto-detects Google Chrome, and `CHROMIUM_PATH` can explicitly select another browser executable.
 
 ### Install and verify
 

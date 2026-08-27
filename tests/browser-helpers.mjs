@@ -50,6 +50,7 @@ async function waitForExit(process, timeout = 5_000) {
   if (process.exitCode !== null || process.signalCode !== null) return;
   await Promise.race([
     new Promise((resolveExit) => process.once('exit', resolveExit)),
+    new Promise((resolveClose) => process.once('close', resolveClose)),
     delay(timeout).then(() => process.kill('SIGKILL')),
   ]);
 }
@@ -143,10 +144,17 @@ async function injectApplication(client, root) {
   })()`);
 }
 
-export async function launchBrowserHarness({ width = 1440, height = 1000, root = 'dist' } = {}) {
+export async function launchBrowserHarness({
+  width = 1440,
+  height = 1000,
+  root = 'dist',
+  env = process.env,
+  platform = process.platform,
+  exists = existsSync,
+} = {}) {
+  const executable = resolveChromiumExecutable({ env, platform, exists });
   const resolvedRoot = resolve(root);
   const profile = await mkdtemp(join(tmpdir(), 'signalui-chromium-'));
-  const executable = resolveChromiumExecutable();
   const browser = spawn(executable, [
     '--headless=new',
     '--no-sandbox',

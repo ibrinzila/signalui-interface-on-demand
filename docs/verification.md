@@ -91,7 +91,7 @@ The accessibility pass checks:
 
 ## Managed-browser constraint
 
-The browser harness auto-detects `/usr/bin/chromium` in Linux CI and Google Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` during macOS development. Set `CHROMIUM_PATH` to explicitly select another compatible executable.
+The browser harness falls back to `/usr/bin/chromium` on Linux; CI supplies its setup-Chrome executable through `CHROMIUM_PATH`. During macOS development it auto-detects Google Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`. Set `CHROMIUM_PATH` to explicitly select another compatible executable.
 
 The container’s system Chromium carries an enterprise `URLBlocklist: ["*"]`, which blocks navigation even to localhost. The test suite does not alter or bypass that policy.
 

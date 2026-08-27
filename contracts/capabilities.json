@@ -1,0 +1,384 @@
+{
+  "version": "1.0",
+  "capabilities": [
+    {
+      "id": "set_interface_context",
+      "title": "Set interface context",
+      "description": "Apply an explicit role, task, device, decision budget and accessibility profile, then recompile the visible interface.",
+      "effect": "ui",
+      "roles": [
+        "operator",
+        "manager",
+        "auditor"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "operator",
+              "manager",
+              "auditor"
+            ],
+            "description": "The role whose authority and information needs the interface must represent."
+          },
+          "intent": {
+            "type": "string",
+            "enum": [
+              "overview",
+              "resolve-actionable-anomalies",
+              "audit-recent-decisions"
+            ],
+            "description": "The explicit task the user wants to perform."
+          },
+          "device": {
+            "type": "string",
+            "enum": [
+              "mobile",
+              "desktop"
+            ],
+            "description": "The current interaction form factor."
+          },
+          "decisionBudget": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8,
+            "description": "Maximum number of primary decisions to show at once."
+          },
+          "explicitUserStatement": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "The user's explicit natural-language task statement; never inferred from behaviour."
+          },
+          "largeTargets": {
+            "type": "boolean",
+            "description": "Use larger touch targets as an explicit preference."
+          },
+          "reducedMotion": {
+            "type": "boolean",
+            "description": "Reduce non-essential motion as an explicit preference."
+          },
+          "highContrast": {
+            "type": "boolean",
+            "description": "Increase visual contrast as an explicit preference."
+          },
+          "verboseLabels": {
+            "type": "boolean",
+            "description": "Use more explicit accessible control labels as an explicit preference."
+          }
+        },
+        "required": [
+          "role",
+          "intent",
+          "device",
+          "decisionBudget"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "untrustedContentHint": false
+      },
+      "requiresConfirmation": false,
+      "availableWhen": [
+        "always"
+      ]
+    },
+    {
+      "id": "list_actionable_anomalies",
+      "title": "List actionable anomalies",
+      "description": "List unresolved meter-reading anomalies currently relevant to the user's admitted role and interface context.",
+      "effect": "read",
+      "roles": [
+        "operator",
+        "manager",
+        "auditor"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "Maximum number of anomalies to return."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": false
+      },
+      "requiresConfirmation": false,
+      "availableWhen": [
+        "workspace-loaded"
+      ]
+    },
+    {
+      "id": "inspect_anomaly",
+      "title": "Inspect anomaly",
+      "description": "Inspect one anomaly's current reading, material evidence, counterevidence, uncertainty and allowed next actions.",
+      "effect": "read",
+      "roles": [
+        "operator",
+        "manager",
+        "auditor"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "anomalyId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40,
+            "description": "Stable anomaly identifier such as A-104."
+          }
+        },
+        "required": [
+          "anomalyId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": true
+      },
+      "requiresConfirmation": false,
+      "availableWhen": [
+        "anomaly-exists"
+      ]
+    },
+    {
+      "id": "compare_reading_history",
+      "title": "Compare reading history",
+      "description": "Compare one anomalous reading with its expected range and recent historical readings without changing application state.",
+      "effect": "read",
+      "roles": [
+        "operator",
+        "manager",
+        "auditor"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "anomalyId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40,
+            "description": "Stable anomaly identifier to compare."
+          }
+        },
+        "required": [
+          "anomalyId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": false
+      },
+      "requiresConfirmation": false,
+      "availableWhen": [
+        "anomaly-exists"
+      ]
+    },
+    {
+      "id": "propose_correction",
+      "title": "Propose correction",
+      "description": "Create a non-final correction proposal for an open anomaly; this does not change the recorded meter value.",
+      "effect": "write",
+      "roles": [
+        "operator",
+        "manager"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "anomalyId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40,
+            "description": "Stable anomaly identifier."
+          },
+          "correctedValue": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Proposed corrected meter value in kWh."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 600,
+            "description": "Evidence-grounded reason for the proposal."
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Current anomaly version observed before proposing."
+          }
+        },
+        "required": [
+          "anomalyId",
+          "correctedValue",
+          "reason",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "untrustedContentHint": true
+      },
+      "requiresConfirmation": false,
+      "availableWhen": [
+        "anomaly-status-open",
+        "role-operator-or-manager"
+      ]
+    },
+    {
+      "id": "request_more_evidence",
+      "title": "Request more evidence",
+      "description": "Record a reversible request for specific additional evidence when the current material is insufficient for a decision.",
+      "effect": "write",
+      "roles": [
+        "operator",
+        "manager"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "anomalyId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40,
+            "description": "Stable anomaly identifier."
+          },
+          "request": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 600,
+            "description": "Specific missing evidence to request."
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Current anomaly version observed before requesting evidence."
+          }
+        },
+        "required": [
+          "anomalyId",
+          "request",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "untrustedContentHint": true
+      },
+      "requiresConfirmation": false,
+      "availableWhen": [
+        "anomaly-unresolved",
+        "role-operator-or-manager"
+      ]
+    },
+    {
+      "id": "request_human_approval",
+      "title": "Request human approval",
+      "description": "Create an exact state-bound approval request for an existing correction proposal without applying the correction.",
+      "effect": "write",
+      "roles": [
+        "operator",
+        "manager"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "anomalyId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40,
+            "description": "Stable anomaly identifier with an active proposal."
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Current anomaly version observed before requesting approval."
+          }
+        },
+        "required": [
+          "anomalyId",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "untrustedContentHint": false
+      },
+      "requiresConfirmation": false,
+      "availableWhen": [
+        "anomaly-status-proposed",
+        "role-operator-or-manager"
+      ]
+    },
+    {
+      "id": "approve_correction",
+      "title": "Approve correction",
+      "description": "Apply one correction only after a manager confirms the exact proposal, evidence fingerprint and current anomaly version.",
+      "effect": "consequential-write",
+      "roles": [
+        "manager"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "anomalyId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40,
+            "description": "Stable anomaly identifier awaiting approval."
+          },
+          "approvalId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "description": "Current pending approval request identifier."
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Exact current anomaly version shown in the approval preview."
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "description": "Exact approval fingerprint shown to the manager."
+          }
+        },
+        "required": [
+          "anomalyId",
+          "approvalId",
+          "expectedVersion",
+          "fingerprint"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "untrustedContentHint": false
+      },
+      "requiresConfirmation": true,
+      "availableWhen": [
+        "anomaly-status-awaiting-approval",
+        "role-manager",
+        "approval-current"
+      ]
+    }
+  ]
+}

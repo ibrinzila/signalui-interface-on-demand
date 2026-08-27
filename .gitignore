@@ -1,0 +1,10 @@
+.build/
+dist/
+node_modules/
+artifacts/runtime/
+*.log
+.DS_Store
+artifacts/proof/
+artifacts/verification-report.json
+artifacts/verification-report.md
+artifacts/verification.log

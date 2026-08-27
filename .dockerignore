@@ -1,0 +1,9 @@
+.git
+.gitignore
+.worktrees
+node_modules
+.build
+dist
+artifacts/runtime
+*.log
+.DS_Store

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-surface="full-workspace" data-role="manager" data-device="desktop">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10151b">
+  <meta name="description" content="SignalUI Interface on Demand: a governed adaptive-interface reference vertical powered by semantic capabilities and WebMCP.">
+  <title>SignalUI · Interface on Demand</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to the workspace</a>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="SignalUI Interface on Demand home">
+      <span class="brand__mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span><strong>SignalUI</strong><small>Interface on Demand</small></span>
+    </a>
+    <p class="app-thesis">Software used to make humans learn its interface. <strong>What if the interface learned what the human needs?</strong></p>
+    <button class="nav-toggle" type="button" data-action="toggle-controls" aria-expanded="false" aria-controls="experience-controls">Experience</button>
+  </header>
+
+  <section class="experience-controls" id="experience-controls" aria-labelledby="experience-title">
+    <div class="experience-controls__intro">
+      <span class="eyebrow">Synthetic governed demonstration</span>
+      <h2 id="experience-title">Tell the application what matters now.</h2>
+    </div>
+    <form class="intent-form" id="intent-form">
+      <label for="intent-input">Current intent</label>
+      <div class="intent-form__field">
+        <textarea id="intent-input" rows="2">I'm on my phone and leaving shortly. Help me resolve only the anomalies that genuinely need my decision.</textarea>
+        <button class="button button--primary" type="submit"><span>Adapt interface</span><span aria-hidden="true">→</span></button>
+      </div>
+      <p>Only explicit context is used. Disability, emotion and cognitive capacity are never inferred.</p>
+    </form>
+    <div class="profile-switcher" aria-label="Synthetic demonstration identities">
+      <span>View as</span>
+      <button type="button" data-profile="operator-mobile"><strong>Field operator</strong><small>Mobile · focused</small></button>
+      <button type="button" data-profile="manager-desktop" aria-pressed="true"><strong>Portfolio manager</strong><small>Desktop · full authority</small></button>
+      <button type="button" data-profile="auditor-desktop"><strong>Auditor</strong><small>Desktop · read-only</small></button>
+    </div>
+  </section>
+
+  <div id="fatal-error" class="fatal-error" role="alert" hidden></div>
+  <div id="app" aria-busy="true"><div class="loading-shell"><span class="loading-shell__mark"></span><p>Validating contracts and compiling the first surface…</p></div></div>
+  <div id="side-panel-layer" class="side-panel-layer" aria-live="polite"></div>
+  <dialog id="modal" class="modal"></dialog>
+
+  <footer class="app-footer">
+    <p><strong>SignalUI Interface on Demand</strong> · synthetic anomaly-review vertical · no real people, institutions or readings.</p>
+    <p>One capability model. Infinite governed surfaces.</p>
+  </footer>
+  <script type="module" src="/src/ui/app.js"></script>
+</body>
+</html>

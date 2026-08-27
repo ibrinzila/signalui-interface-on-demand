@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "recipes": [
+    {
+      "id": "full-workspace",
+      "title": "Full operations workspace",
+      "description": "Portfolio-wide operational view with queue, evidence, history and activity.",
+      "regions": ["workspace-header", "portfolio-summary", "anomaly-queue", "history-overview", "activity", "adaptation-explanation", "reversal-controls"],
+      "maxPrimaryItems": 20
+    },
+    {
+      "id": "focused-decisions",
+      "title": "Focused decision surface",
+      "description": "Smallest adequate interface for the user's present anomaly decisions.",
+      "regions": ["focus-progress", "material-evidence", "decision-cards", "exact-action-preview", "adaptation-explanation", "reversal-controls"],
+      "maxPrimaryItems": 5
+    },
+    {
+      "id": "audit-trail",
+      "title": "Audit and provenance surface",
+      "description": "Read-only chronological evidence, authority and receipt view.",
+      "regions": ["audit-summary", "receipt-timeline", "evidence-provenance", "state-hashes", "adaptation-explanation", "reversal-controls"],
+      "maxPrimaryItems": 50
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "signalui-interface-on-demand",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A governed adaptive-interface reference vertical powered by SignalUI contracts and WebMCP.",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "clean": "rm -rf .build dist artifacts/runtime artifacts/proof",
+    "compile": "rm -rf .build && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:unit": "npm run compile && node --test tests/*.test.mjs",
+    "validate": "node scripts/validate-contracts.mjs",
+    "build": "node scripts/build.mjs",
+    "eval": "node scripts/run-evals.mjs",
+    "start": "node scripts/server.mjs",
+    "test:e2e": "node tests/e2e.mjs",
+    "test:a11y": "node tests/accessibility.mjs",
+    "verify": "npm run clean && npm run validate && npm run docs:check && npm run release:check && npm run test:unit && npm run build && npm run check:dist && npm run check:reproducible && npm run eval && npm run test:e2e && npm run test:a11y && npm run check:proof",
+    "check:dist": "node scripts/check-dist.mjs",
+    "check:reproducible": "node scripts/check-reproducible.mjs",
+    "check:proof": "node scripts/check-proof.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
+    "release:check": "node scripts/check-release.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  },
+  "license": "MIT"
+}

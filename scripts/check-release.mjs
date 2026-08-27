@@ -28,7 +28,11 @@ async function files(directory = root) {
 
 export async function checkRelease() {
   const failures = [];
-  const required = ['README.md', 'LICENSE', 'SECURITY.md', 'docs/deployment.md', 'wrangler.toml', 'public/_headers', 'public/manifest.webmanifest'];
+  const required = [
+    'README.md', 'LICENSE', 'SECURITY.md', 'docs/deployment.md',
+    'docs/devpost-submission.md', 'docs/judge-testing.md', 'docs/release-evidence.md',
+    'wrangler.toml', 'public/_headers', 'public/manifest.webmanifest',
+  ];
   for (const path of required) {
     try { await access(resolve(root, path)); } catch { failures.push(`missing:${path}`); }
   }
@@ -40,6 +44,31 @@ export async function checkRelease() {
     if (unfinishedPattern.test(body)) failures.push(`unfinished:${relative(root, path)}`);
     if (body.split('\n').some((line) => /[ \t]+$/.test(line))) failures.push(`trailing-whitespace:${relative(root, path)}`);
     if (body.length > 0 && !body.endsWith('\n')) failures.push(`missing-final-newline:${relative(root, path)}`);
+  }
+  const readProjectFile = async (path) => readFile(resolve(root, path), 'utf8');
+  try {
+    const readme = await readProjectFile('README.md');
+    for (const [heading, expected] of [
+      ['Live demo', 'https://signalui-interface-on-demand.pages.dev'],
+      ['Public source', 'https://github.com/ibrinzila/signalui-interface-on-demand'],
+      ['Judge testing', 'docs/judge-testing.md'],
+      ['Three-minute demo', 'Operator upload pending'],
+    ]) {
+      if (!new RegExp(`^## ${heading}$`, 'm').test(readme) || !readme.includes(expected)) {
+        failures.push(`readme-release-field:${heading}`);
+      }
+    }
+    const videoMarker = 'Operator upload pending';
+    if ((readme.match(new RegExp(videoMarker, 'g')) ?? []).length !== 1 || !/^Operator upload pending$/m.test(readme)) {
+      failures.push('readme-video-marker');
+    }
+  } catch {
+    failures.push('readme-release-fields');
+  }
+  for (const path of await files()) {
+    const projectPath = relative(root, path);
+    if (projectPath === 'README.md' || projectPath === 'scripts/check-release.mjs' || projectPath.startsWith('.superpowers/') || projectPath.startsWith('docs/superpowers/')) continue;
+    if ((await readFile(path, 'utf8')).includes('Operator upload pending')) failures.push(`video-marker-outside-readme:${relative(root, path)}`);
   }
   try {
     await access(resolve(root, '.git'));

@@ -77,6 +77,24 @@ npm run release:check # scan release files, markers, secrets and whitespace
 
 The complete recording script is in [`docs/demo-script.md`](docs/demo-script.md).
 
+## Live demo
+
+Release target: https://signalui-interface-on-demand.pages.dev
+
+This URL is not yet deployment-verified. See [`docs/release-evidence.md`](docs/release-evidence.md) for the current evidence state.
+
+## Public source
+
+Release target: https://github.com/ibrinzila/signalui-interface-on-demand
+
+## Judge testing
+
+Follow the [judge testing guide](docs/judge-testing.md) to distinguish native WebMCP evidence from the fallback console and to verify the shared human/tool command path.
+
+## Three-minute demo
+
+Operator upload pending
+
 ## Architecture at a glance
 
 ```text

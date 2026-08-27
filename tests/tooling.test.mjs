@@ -1,10 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const { startServer } = await import('../scripts/server.mjs');
+
+test('judge-facing release documents provide the required evidence and testing boundaries', async () => {
+  const [devpost, judgeTesting, releaseEvidence] = await Promise.all([
+    readFile(new URL('../docs/devpost-submission.md', import.meta.url), 'utf8'),
+    readFile(new URL('../docs/judge-testing.md', import.meta.url), 'utf8'),
+    readFile(new URL('../docs/release-evidence.md', import.meta.url), 'utf8'),
+  ]);
+
+  for (const heading of ['WebMCP leverage', 'People and agents together', 'Implementation', 'Impact', 'Testing']) {
+    assert.match(devpost, new RegExp(`^## ${heading}$`, 'm'));
+  }
+  assert.match(judgeTesting, /native WebMCP/i);
+  assert.match(judgeTesting, /fallback console/i);
+  for (const field of ['Source commit', 'Deployment URL', 'Deployment timestamp', 'Smoke results']) {
+    assert.match(releaseEvidence, new RegExp(`^[-*] \\*\\*${field}:\\*\\*`, 'm'));
+  }
+});
 
 test('static server serves same-origin assets with fail-closed security headers', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'signalui-server-'));

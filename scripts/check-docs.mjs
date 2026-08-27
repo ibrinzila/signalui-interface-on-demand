@@ -7,6 +7,7 @@ const required = [
   'README.md', 'LICENSE', 'SECURITY.md', 'CHANGELOG.md', 'llms.txt',
   'docs/architecture.md', 'docs/webmcp-tools.md', 'docs/demo-script.md',
   'docs/adoption-path.md', 'docs/verification.md', 'docs/deployment.md',
+  'docs/devpost-submission.md', 'docs/judge-testing.md', 'docs/release-evidence.md',
 ];
 
 async function exists(path) {
@@ -17,6 +18,18 @@ for (const path of required) {
   if (!await exists(path)) throw new Error(`Required release document is missing: ${path}`);
 }
 if (await exists('.bootstrap')) throw new Error('Transient .bootstrap marker must not ship.');
+
+const documentRequirements = [
+  ['docs/devpost-submission.md', ['## WebMCP leverage', '## People and agents together', '## Implementation', '## Impact', '## Testing']],
+  ['docs/judge-testing.md', ['native WebMCP', 'fallback console']],
+  ['docs/release-evidence.md', ['**Source commit:**', '**Deployment URL:**', '**Deployment timestamp:**', '**Smoke results:**']],
+];
+for (const [path, requiredText] of documentRequirements) {
+  const body = await readFile(resolve(root, path), 'utf8');
+  for (const text of requiredText) {
+    if (!body.includes(text)) throw new Error(`${path} is missing required release content: ${text}`);
+  }
+}
 
 async function markdownFiles(directory) {
   const entries = await readdir(resolve(root, directory), { withFileTypes: true });
